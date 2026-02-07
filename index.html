@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="styles.css">
+  <title>CA Court Deadlines</title>
+
+</head>
+
+<body>
+  <h1>CA Court Deadlines</h1>
+
+  <h3>Select a starting date:</h3>
+  <input type="date" id="dateInput" placeholder="Select a date" />
+
+  <div class="toggle-switch-container">
+    <span class="toggle-label-left">Calendar Days</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="calculationModeToggle">
+      <span class="slider round"></span>
+    </label>
+    <span class="toggle-label-right">Court Days</span>
+  </div>
+
+  <div id="deadlinesContainer"></div>
+
+  <h3>Enter days from the selected day</h3>
+  <input type="text" id="customDeadlines" />
+  <button id="updateCustomDeadlines">Update Deadlines</button>
+
+  <div class="instructions-container">
+    <a href="#" id="toggleInstructions">Show Instructions</a>
+    <div id="instructionsContent" style="display: none;">
+      <h3>How to Use the Calculator</h3>
+      <ol>
+        <li>
+          <strong>Select a Starting Date:</strong> Click the date input box to bring
+          up a calendar and pick your key event date.
+        </li>
+        <li>
+          <strong>Choose Calculation Mode:</strong> Use the toggle switch to
+          choose between 'Calendar Days' (includes all days and adjusts the
+          final date) or 'Court Days' (skips weekends and holidays entirely).
+        </li>
+        <li>
+          <strong>Calculate Deadlines:</strong> Enter the number of days in the text
+          box that you want to calculate and click 'Update Deadlines'. You may enter
+          mulitple date differentials at the same time seperated by spaces or commas
+          (ex: -30, -15, 0, 15, 30).
+        </li>
+        <li>
+          <strong>Use At Your Own Risk:</strong> While we believe this calculator to
+          be accurate and is here to help you as much as possible, it comes with no promises,
+          guarantees, or liability. In other words, you are responsible in making sure you calculate
+          your deadlines correctly.
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,237 @@
+/* General body styling */
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+/* Header styling */
+h1 {
+  text-align: center;
+  color: #444;
+  margin-top: 20px;
+}
+
+/* Input styling */
+input[type="text"] {
+  display: block;
+  margin: 20px auto;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 80%;
+  max-width: 400px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Section headers */
+h3 {
+  color: #555;
+  margin: 20px auto 10px;
+  text-align: center;
+}
+
+/* Paragraph styling */
+p {
+  margin: 10px auto;
+  padding: 0 20px;
+  max-width: 800px;
+  text-align: justify;
+}
+
+/* Span styling for deadlines */
+.deadlines {
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+/* Green for court days */
+.court-mode .deadlines {
+  color: #4CAF50;
+}
+
+/* Blue for calendar days */
+.calendar-mode .deadlines {
+  color: #007BFF;
+}
+
+/* Add some spacing */
+deadlines, h3 {
+  margin-bottom: 10px;
+}
+
+/* Add hover effect to input */
+input[type="text"]:hover {
+  border-color: #007BFF;
+}
+
+/* Add focus effect to input */
+input[type="text"]:focus {
+  outline: none;
+  border-color: #007BFF;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Button styling */
+button#updateCustomDeadlines {
+  display: block;
+  margin: 20px auto 30px auto;
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(90deg, #007BFF 0%, #0056b3 100%);
+  border: none;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.10);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+button#updateCustomDeadlines:hover, button#updateCustomDeadlines:focus {
+  background: linear-gradient(90deg, #0056b3 0%, #007BFF 100%);
+  box-shadow: 0 4px 16px rgba(0, 123, 255, 0.18);
+  outline: none;
+}
+
+/* Styling for the calculation mode toggle */
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 15px auto;
+}
+
+.toggle-label-left,
+.toggle-label-right {
+  font-weight: bold;
+  color: #555; /* Default color */
+  transition: color 0.3s ease;
+  cursor: pointer; /* Indicate clickable */
+}
+
+.toggle-label-left {
+    margin-right: 10px;
+}
+
+.toggle-label-right {
+    margin-left: 10px;
+}
+
+
+/* The switch - the box around the slider */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px; /* Width of the switch */
+  height: 34px; /* Height of the switch */
+}
+
+/* Hide default HTML checkbox */
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #007BFF; /* Background color when off (Blue) */
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px; /* Size of the knob */
+  width: 26px; /* Size of the knob */
+  left: 4px; /* Initial position */
+  bottom: 4px; /* Initial position */
+  background-color: white; /* Color of the knob */
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #4CAF50; /* Background color when on (Green) */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #007BFF;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px); /* Move knob to the right */
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Style labels based on checked state */
+input:checked ~ .toggle-label-right {
+    color: #4CAF50; /* Highlight Court Days when checked */
+}
+
+input:not(:checked) ~ .toggle-label-left {
+    color: #007BFF; /* Highlight Calendar Days when not checked */
+}
+
+/* Instruction CSS */
+.instructions-container {
+  max-width: 800px; /* Match your other content width */
+  margin: 30px auto;
+  text-align: center;
+}
+
+#toggleInstructions {
+  cursor: pointer;
+  color: #007BFF;
+  font-weight: bold;
+  text-decoration: none;
+}
+#toggleInstructions:hover {
+  text-decoration: underline;
+}
+
+#instructionsContent {
+  margin-top: 15px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+#instructionsContent h3 {
+  margin-top: 0;
+  color: #444;
+}
+
+#instructionsContent ol {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+
+#instructionsContent li {
+  margin-bottom: 10px;
+}
