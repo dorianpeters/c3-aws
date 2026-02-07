@@ -59,7 +59,7 @@
     // Spec: "update anytime the starting date, the offsets, or changes"
 
     // Using current URL as base, expecting intercept.
-    var url = window.location.href;
+    var url = '/api/calculate';
 
     var headers = {
       'x-start-date': lastTrialDateStr,
