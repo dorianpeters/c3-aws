@@ -1,13 +1,14 @@
-function handler(event) {
-  var request = event.request;
-  var headers = request.headers;
+import cf from 'cloudfront';
 
-  // Helper to get header value safely
+const kvsHandle = cf.kvs();
+
+async function handler(event) {
+  const request = event.request;
+  const headers = request.headers;
+
+  // Helper to safely extract headers
   function getHeader(name) {
-    if (headers[name] && headers[name].value) {
-      return headers[name].value;
-    }
-    return null; // Return null if header doesn't exist
+    return headers[name] ? headers[name].value : null;
   }
 
   var startDateStr = getHeader('x-start-date');
@@ -48,7 +49,10 @@ function handler(event) {
       throw new Error("Invalid start date format");
     }
 
-    var deadlines = calculateDeadlines(startDate, offsets, useCourtDays);
+    // A local cache for this execution to avoid hitting KVS limits in loops
+    const localHolidayCache = {};
+
+    var deadlines = await calculateDeadlines(startDate, offsets, useCourtDays, kvsHandle, localHolidayCache);
 
     return {
       statusCode: 200,
@@ -64,6 +68,7 @@ function handler(event) {
     };
 
   } catch (e) {
+    console.log('Error calculating deadlines:', e);
     return {
       statusCode: 500,
       statusDescription: 'Internal Server Error',
@@ -71,8 +76,6 @@ function handler(event) {
     };
   }
 }
-
-
 
 // --- Date Utils ---
 
@@ -87,110 +90,104 @@ function toLocalIso(date) {
   return y + '-' + m + '-' + d;
 }
 
-function isSaturday(date) {
-  return date.getDay() === 6;
+function addCalendarDaysFn(date, n) {
+  var d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
 }
 
-function isSunday(date) {
-  return date.getDay() === 0;
-}
-
-function isCourtDay(date, holidays) {
-  holidays = holidays || holidayIntSet;
-  // 1. Cheap check: Weekends
+// Now async to fetch from KVS
+async function isCourtDay(date, kvsHandle, cache) {
   var day = date.getDay();
   if (day === 0 || day === 6) {
     return false;
   }
 
-  // 2. Math-based key generation (0 instructions compared to string formatting)
-  // Example: 2025-01-01 becomes 20250101
   var y = date.getFullYear();
   var m = date.getMonth() + 1;
   var d = date.getDate();
+  var keyStr = ((y * 10000) + (m * 100) + d).toString(); // e.g., "20250101"
 
-  // Math: Year * 10000 + Month * 100 + Day
-  var key = (y * 10000) + (m * 100) + d;
+  // Check local memory cache first
+  if (cache[keyStr] !== undefined) {
+    return !cache[keyStr]; // Return true if it is NOT a holiday
+  }
 
-  // 3. Fast Integer Lookup
-  // Note: We use the holidayIntSet we created above
-  return !holidays[key];
+  try {
+    // If the key exists, it's a holiday
+    await kvsHandle.get(keyStr);
+    cache[keyStr] = true;
+    return false;
+  } catch (err) {
+    // KVS throws an error if the key is not found -> Not a holiday
+    cache[keyStr] = false;
+    return true;
+  }
 }
 
-function addCalendarDaysFn(date, n) {
-  var d = new Date(date); // Clone
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function subDays(date, n) {
-  return addCalendarDaysFn(date, -n);
-}
-
-function adjustBackwardToCourtDay(date, holidays) {
-  holidays = holidays || holidayIntSet;
+async function adjustBackwardToCourtDay(date, kvsHandle, cache) {
   var d = new Date(date);
-  while (!isCourtDay(d, holidays)) {
+  while (!(await isCourtDay(d, kvsHandle, cache))) {
     d.setDate(d.getDate() - 1);
   }
   return d;
 }
 
-function adjustForwardToCourtDay(date, holidays) {
-  holidays = holidays || holidayIntSet;
+async function adjustForwardToCourtDay(date, kvsHandle, cache) {
   var d = new Date(date);
-  while (!isCourtDay(d, holidays)) {
+  while (!(await isCourtDay(d, kvsHandle, cache))) {
     d.setDate(d.getDate() + 1);
   }
   return d;
 }
 
-function addCourtDays(date, n, holidays) {
-  holidays = holidays || holidayIntSet;
+async function addCourtDays(date, n, kvsHandle, cache) {
   if (n === 0) {
-    return isCourtDay(date, holidays) ? new Date(date) : adjustForwardToCourtDay(date, holidays);
+    return (await isCourtDay(date, kvsHandle, cache)) ? new Date(date) : await adjustForwardToCourtDay(date, kvsHandle, cache);
   }
   var step = n > 0 ? 1 : -1;
   var count = 0;
   var d = new Date(date);
+
   while (count < Math.abs(n)) {
     d.setDate(d.getDate() + step);
-    if (isCourtDay(d, holidays)) count++;
+    if (await isCourtDay(d, kvsHandle, cache)) count++;
   }
   return d;
 }
 
-function addDays(date, n, opts) {
+async function addDays(date, n, opts) {
   opts = opts || {};
   var useCourtDays = opts.useCourtDays || false;
-  var holidays = opts.holidays || holidayIntSet;
+  var kvsHandle = opts.kvsHandle;
+  var cache = opts.cache;
 
-  if (useCourtDays) return addCourtDays(date, n, holidays);
+  if (useCourtDays) return await addCourtDays(date, n, kvsHandle, cache);
 
   var candidate = addCalendarDaysFn(date, n);
-  if (!isCourtDay(candidate, holidays)) {
+  if (!(await isCourtDay(candidate, kvsHandle, cache))) {
     return n >= 0
-      ? adjustForwardToCourtDay(candidate, holidays)
-      : adjustBackwardToCourtDay(candidate, holidays);
+      ? await adjustForwardToCourtDay(candidate, kvsHandle, cache)
+      : await adjustBackwardToCourtDay(candidate, kvsHandle, cache);
   }
   return candidate;
 }
 
 // --- Deadline Calculator ---
 
-function calculateDeadlines(startDate, differentials, useCourtDays, holidays) {
-  useCourtDays = useCourtDays || false;
-  holidays = holidays || holidayIntSet;
-
+async function calculateDeadlines(startDate, differentials, useCourtDays, kvsHandle, cache) {
   var results = {};
 
-  // Using forEach for compatibility
-  differentials.forEach(function (diff) {
-    var date = addDays(startDate, diff, { useCourtDays: useCourtDays, holidays: holidays });
+  // Replaced forEach with a standard for-loop to properly await the async calls
+  for (var i = 0; i < differentials.length; i++) {
+    var diff = differentials[i];
+    var date = await addDays(startDate, diff, {
+      useCourtDays: useCourtDays,
+      kvsHandle: kvsHandle,
+      cache: cache
+    });
     results[diff] = toLocalIso(date);
-  });
+  }
 
   return results;
 }
-
-// End of script
