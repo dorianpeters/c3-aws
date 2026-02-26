@@ -108,6 +108,11 @@ dateInput.addEventListener('change', (e) => {
 
 toggle.addEventListener('change', (e) => {
   useCourtDays = e.target.checked;
+  if (useCourtDays) {
+    updateButton.classList.add('court-mode-btn');
+  } else {
+    updateButton.classList.remove('court-mode-btn');
+  }
   fetchDeadlines();
 });
 
@@ -131,6 +136,12 @@ if (!dateInput.value) {
 }
 
 lastTrialDateStr = dateInput.value;
+
+if (useCourtDays) {
+  updateButton.classList.add('court-mode-btn');
+} else {
+  updateButton.classList.remove('court-mode-btn');
+}
 
 if (customInput.value.trim()) {
   fetchDeadlines();

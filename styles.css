@@ -114,6 +114,18 @@ button#updateCustomDeadlines:focus {
   outline: none;
 }
 
+/* Modifier class applied to button via ui.js */
+button#updateCustomDeadlines.court-mode-btn {
+  background: linear-gradient(90deg, #4CAF50 0%, #388E3C 100%);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.10);
+}
+
+button#updateCustomDeadlines.court-mode-btn:hover,
+button#updateCustomDeadlines.court-mode-btn:focus {
+  background: linear-gradient(90deg, #388E3C 0%, #4CAF50 100%);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.18);
+}
+
 /* Styling for the calculation mode toggle */
 .toggle-switch-container {
   display: flex;
