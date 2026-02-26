@@ -1,46 +1,71 @@
-(function () {
-  var dateInput = document.getElementById('dateInput');
-  var toggle = document.getElementById('calculationModeToggle');
-  var deadlinesContainer = document.getElementById('deadlinesContainer');
-  var customInput = document.getElementById('customDeadlines');
-  var updateButton = document.getElementById('updateCustomDeadlines');
-  var toggleInstructions = document.getElementById('toggleInstructions');
-  var instructionsContent = document.getElementById('instructionsContent');
+const dateInput = document.getElementById('dateInput');
+const toggle = document.getElementById('calculationModeToggle');
+const deadlinesContainer = document.getElementById('deadlinesContainer');
+const customInput = document.getElementById('customDeadlines');
+const updateButton = document.getElementById('updateCustomDeadlines');
+const toggleInstructions = document.getElementById('toggleInstructions');
+const instructionsContent = document.getElementById('instructionsContent');
 
-  var dateFormatter = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  });
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric'
+});
 
-  // State
-  var lastTrialDateStr = ''; // YYYY-MM-DD
-  var useCourtDays = toggle.checked;
+// State
+let lastTrialDateStr = ''; // YYYY-MM-DD
+let useCourtDays = toggle.checked;
 
-  function parseDifferentials(input) {
-    if (!input) return [];
-    var trimmed = input.trim();
-    if (!trimmed) return [];
+const parseDifferentials = (input) => {
+  if (!input) return [];
+  const trimmed = input.trim();
+  if (!trimmed) return [];
 
-    var tokens = trimmed.split(/[\s,]+/).filter(Boolean);
-    if (tokens.length > 250) return null; // Too many
+  const tokens = trimmed.split(/[\s,]+/).filter(Boolean);
+  if (tokens.length > 250) return null; // Too many
 
-    var results = [];
-    for (var i = 0; i < tokens.length; i++) {
-      var t = tokens[i];
-      if (!/^[-+]?\d+$/.test(t)) return null; // Invalid format
-      var n = Number(t);
-      if (n < -1000 || n > 1000) return null; // Out of bounds
-      results.push(n);
-    }
-    return results;
+  const results = [];
+  for (const t of tokens) {
+    if (!/^[-+]?\d+$/.test(t)) return null; // Invalid format
+    const n = Number(t);
+    if (n < -1000 || n > 1000) return null; // Out of bounds
+    results.push(n);
+  }
+  return results;
+};
+
+const renderResults = (deadlinesMap, sortedDiffs) => {
+  deadlinesContainer.className = useCourtDays ? 'court-mode' : 'calendar-mode';
+
+  let html = '';
+  for (const diff of sortedDiffs) {
+    const dateIso = deadlinesMap[diff];
+    if (!dateIso) continue;
+
+    const parts = dateIso.split('-');
+    const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+
+    const offsetText = Math.abs(diff);
+    const typeText = useCourtDays ? 'court' : 'calendar';
+    const dirText = diff >= 0 ? 'after' : 'before';
+
+    const formattedDate = dateFormatter.format(dateObj);
+    const description = `${offsetText} ${typeText} days ${dirText} the selected date:`;
+
+    html += `<h3>${description} <span class="deadlines">${formattedDate}</span></h3>`;
   }
 
-  function fetchDeadlines() {
-    // Requirements: Date, Offsets, Mode
-    var offsetsValue = customInput.value;
-    var diffs = parseDifferentials(offsetsValue);
+  deadlinesContainer.innerHTML = html;
+};
+
+let fetchTimeout = null;
+const fetchDeadlines = () => {
+  if (fetchTimeout !== null) clearTimeout(fetchTimeout);
+
+  fetchTimeout = setTimeout(() => {
+    const offsetsValue = customInput.value;
+    const diffs = parseDifferentials(offsetsValue);
 
     if (diffs === null && offsetsValue.trim()) {
       deadlinesContainer.className = '';
@@ -53,93 +78,51 @@
       return;
     }
 
-    // Construct API request
-    // We assume the CloudFront function is intercepting this request
-    // or we are hitting an endpoint that proxies to it.
-    // Spec: "update anytime the starting date, the offsets, or changes"
-
-    // Using current URL as base, expecting intercept.
-    var url = '/api/calculate';
-
-    var headers = {
+    const url = '/api/calculate';
+    const headers = {
       'x-start-date': lastTrialDateStr,
       'x-offsets': diffs.join(','),
       'x-calculation-method': useCourtDays ? 'court' : 'calendar'
     };
 
-    fetch(url, { headers: headers })
-      .then(function (res) {
-        if (!res.ok) throw new Error('API Error: ' + res.status);
+    fetch(url, { headers })
+      .then(res => {
+        if (!res.ok) throw new Error(`API Error: ${res.status}`);
         return res.json();
       })
-      .then(function (data) {
-        // data.deadlines is { "offset": "YYYY-MM-DD" }
+      .then(data => {
         renderResults(data.deadlines, diffs);
       })
-      .catch(function (err) {
+      .catch(err => {
         console.error(err);
         deadlinesContainer.innerHTML = '<p class="error">Error calculating deadlines. Please try again.</p>';
       });
-  }
+  }, 100);
+};
 
-  function renderResults(deadlinesMap, sortedDiffs) {
-    deadlinesContainer.className = useCourtDays ? 'court-mode' : 'calendar-mode';
+// Event Listeners
+dateInput.addEventListener('change', (e) => {
+  lastTrialDateStr = e.target.value; // YYYY-MM-DD from input type="date"
+  fetchDeadlines();
+});
 
-    var html = '';
-    // Use sortedDiffs to maintain input order
-    for (var i = 0; i < sortedDiffs.length; i++) {
-      var diff = sortedDiffs[i];
-      var dateIso = deadlinesMap[diff];
-      if (!dateIso) continue;
+toggle.addEventListener('change', (e) => {
+  useCourtDays = e.target.checked;
+  fetchDeadlines();
+});
 
-      // Parse date for formatting (YYYY-MM-DD)
-      // Note: new Date("2026-03-09") is treated as UTC in JS usually, 
-      // but we want local or strictly formatted. 
-      // Best to append T00:00:00 to ensure local date interpretation or split.
-      var parts = dateIso.split('-');
-      // Note: Month is 0-indexed in JS Date constructor
-      var dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+updateButton.addEventListener('click', fetchDeadlines);
+customInput.addEventListener('change', fetchDeadlines); // Also update on change/blur
 
-      var offsetText = Math.abs(diff);
-      var typeText = useCourtDays ? 'court' : 'calendar';
-      var dirText = diff >= 0 ? 'after' : 'before';
+toggleInstructions.addEventListener('click', (e) => {
+  e.preventDefault();
+  const isHidden = instructionsContent.style.display === 'none';
+  instructionsContent.style.display = isHidden ? 'block' : 'none';
+  toggleInstructions.textContent = isHidden ? 'Hide Instructions' : 'Show Instructions';
+});
 
-      var formattedDate = dateFormatter.format(dateObj);
-
-      // "5 calendar days after the selected date: Friday, February 13, 2026"
-      var description = offsetText + ' ' + typeText + ' days ' + dirText + ' the selected date:';
-
-      html += '<h3>' + description + ' <span class="deadlines">' + formattedDate + '</span></h3>';
-    }
-
-    deadlinesContainer.innerHTML = html;
-  }
-
-  // Event Listeners
-  dateInput.addEventListener('change', function (e) {
-    lastTrialDateStr = e.target.value; // YYYY-MM-DD from input type="date"
-    fetchDeadlines();
-  });
-
-  toggle.addEventListener('change', function (e) {
-    useCourtDays = e.target.checked;
-    fetchDeadlines();
-  });
-
-  updateButton.addEventListener('click', fetchDeadlines);
-  customInput.addEventListener('change', fetchDeadlines); // Also update on change/blur
-
-  toggleInstructions.addEventListener('click', function (e) {
-    e.preventDefault();
-    var isHidden = instructionsContent.style.display === 'none';
-    instructionsContent.style.display = isHidden ? 'block' : 'none';
-    toggleInstructions.textContent = isHidden ? 'Hide Instructions' : 'Show Instructions';
-  });
-
-  // Init
-  if (dateInput.value) {
-    lastTrialDateStr = dateInput.value;
-    fetchDeadlines();
-  }
-
-})();
+// Init
+if (dateInput.value) {
+  lastTrialDateStr = dateInput.value;
+  fetchDeadlines();
+}

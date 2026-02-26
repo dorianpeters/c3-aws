@@ -6,16 +6,12 @@ async function handler(event) {
   const request = event.request;
   const headers = request.headers;
 
-  // Helper to safely extract headers
-  function getHeader(name) {
-    return headers[name] ? headers[name].value : null;
-  }
+  const getHeader = (name) => headers[name] ? headers[name].value : null;
 
-  var startDateStr = getHeader('x-start-date');
-  var offsetsStr = getHeader('x-offsets');
-  var calculationMethod = getHeader('x-calculation-method') || 'calendar'; // Default to calendar
+  const startDateStr = getHeader('x-start-date');
+  const offsetsStr = getHeader('x-offsets');
+  const calculationMethod = getHeader('x-calculation-method') || 'calendar';
 
-  // Validation
   if (!startDateStr) {
     return {
       statusCode: 400,
@@ -32,7 +28,7 @@ async function handler(event) {
     };
   }
 
-  var offsets = offsetsStr.split(',').map(function (s) { return parseInt(s.trim(), 10); });
+  const offsets = offsetsStr.split(',').map(s => parseInt(s.trim(), 10));
   if (offsets.some(isNaN)) {
     return {
       statusCode: 400,
@@ -41,18 +37,17 @@ async function handler(event) {
     };
   }
 
-  var useCourtDays = calculationMethod === 'court';
+  const useCourtDays = calculationMethod === 'court';
 
   try {
-    var startDate = new Date(startDateStr);
+    const startDate = new Date(startDateStr);
     if (isNaN(startDate.getTime())) {
       throw new Error("Invalid start date format");
     }
 
-    // A local cache for this execution to avoid hitting KVS limits in loops
     const localHolidayCache = {};
 
-    var deadlines = await calculateDeadlines(startDate, offsets, useCourtDays, kvsHandle, localHolidayCache);
+    const deadlines = await calculateDeadlines(startDate, offsets, useCourtDays, kvsHandle, localHolidayCache);
 
     return {
       statusCode: 200,
@@ -68,7 +63,7 @@ async function handler(event) {
     };
 
   } catch (e) {
-    console.log('Error calculating deadlines:', e);
+    console.log(`Error calculating deadlines: ${e}`);
     return {
       statusCode: 500,
       statusDescription: 'Internal Server Error',
@@ -77,56 +72,48 @@ async function handler(event) {
   }
 }
 
-// --- Date Utils ---
+const pad2 = (n) => (`0${n}`).slice(-2);
 
-function pad2(n) {
-  return ('0' + n).slice(-2);
-}
+const toLocalIso = (date) => {
+  const y = date.getFullYear();
+  const m = pad2(date.getMonth() + 1);
+  const d = pad2(date.getDate());
+  return `${y}-${m}-${d}`;
+};
 
-function toLocalIso(date) {
-  var y = date.getFullYear();
-  var m = pad2(date.getMonth() + 1);
-  var d = pad2(date.getDate());
-  return y + '-' + m + '-' + d;
-}
-
-function addCalendarDaysFn(date, n) {
-  var d = new Date(date);
+const addCalendarDaysFn = (date, n) => {
+  const d = new Date(date);
   d.setDate(d.getDate() + n);
   return d;
-}
+};
 
-// Now async to fetch from KVS
 async function isCourtDay(date, kvsHandle, cache) {
-  var day = date.getDay();
+  const day = date.getDay();
   if (day === 0 || day === 6) {
     return false;
   }
 
-  var y = date.getFullYear();
-  var m = date.getMonth() + 1;
-  var d = date.getDate();
-  var keyStr = ((y * 10000) + (m * 100) + d).toString(); // e.g., "20250101"
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const keyStr = ((y * 10000) + (m * 100) + d).toString();
 
-  // Check local memory cache first
   if (cache[keyStr] !== undefined) {
-    return !cache[keyStr]; // Return true if it is NOT a holiday
+    return !cache[keyStr];
   }
 
   try {
-    // If the key exists, it's a holiday
     await kvsHandle.get(keyStr);
     cache[keyStr] = true;
     return false;
   } catch (err) {
-    // KVS throws an error if the key is not found -> Not a holiday
     cache[keyStr] = false;
     return true;
   }
 }
 
 async function adjustBackwardToCourtDay(date, kvsHandle, cache) {
-  var d = new Date(date);
+  const d = new Date(date);
   while (!(await isCourtDay(d, kvsHandle, cache))) {
     d.setDate(d.getDate() - 1);
   }
@@ -134,7 +121,7 @@ async function adjustBackwardToCourtDay(date, kvsHandle, cache) {
 }
 
 async function adjustForwardToCourtDay(date, kvsHandle, cache) {
-  var d = new Date(date);
+  const d = new Date(date);
   while (!(await isCourtDay(d, kvsHandle, cache))) {
     d.setDate(d.getDate() + 1);
   }
@@ -145,9 +132,9 @@ async function addCourtDays(date, n, kvsHandle, cache) {
   if (n === 0) {
     return (await isCourtDay(date, kvsHandle, cache)) ? new Date(date) : await adjustForwardToCourtDay(date, kvsHandle, cache);
   }
-  var step = n > 0 ? 1 : -1;
-  var count = 0;
-  var d = new Date(date);
+  const step = n > 0 ? 1 : -1;
+  let count = 0;
+  const d = new Date(date);
 
   while (count < Math.abs(n)) {
     d.setDate(d.getDate() + step);
@@ -158,13 +145,13 @@ async function addCourtDays(date, n, kvsHandle, cache) {
 
 async function addDays(date, n, opts) {
   opts = opts || {};
-  var useCourtDays = opts.useCourtDays || false;
-  var kvsHandle = opts.kvsHandle;
-  var cache = opts.cache;
+  const useCourtDays = opts.useCourtDays || false;
+  const kvsHandle = opts.kvsHandle;
+  const cache = opts.cache;
 
   if (useCourtDays) return await addCourtDays(date, n, kvsHandle, cache);
 
-  var candidate = addCalendarDaysFn(date, n);
+  const candidate = addCalendarDaysFn(date, n);
   if (!(await isCourtDay(candidate, kvsHandle, cache))) {
     return n >= 0
       ? await adjustForwardToCourtDay(candidate, kvsHandle, cache)
@@ -173,15 +160,12 @@ async function addDays(date, n, opts) {
   return candidate;
 }
 
-// --- Deadline Calculator ---
-
 async function calculateDeadlines(startDate, differentials, useCourtDays, kvsHandle, cache) {
-  var results = {};
+  const results = {};
 
-  // Replaced forEach with a standard for-loop to properly await the async calls
-  for (var i = 0; i < differentials.length; i++) {
-    var diff = differentials[i];
-    var date = await addDays(startDate, diff, {
+  for (let i = 0; i < differentials.length; i++) {
+    const diff = differentials[i];
+    const date = await addDays(startDate, diff, {
       useCourtDays: useCourtDays,
       kvsHandle: kvsHandle,
       cache: cache
