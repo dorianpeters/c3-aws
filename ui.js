@@ -22,8 +22,8 @@ const parseDifferentials = (input) => {
   const trimmed = input.trim();
   if (!trimmed) return [];
 
-  const tokens = trimmed.split(/[\s,]+/).filter(Boolean);
-  if (tokens.length > 250) return null; // Too many
+  const tokens = trimmed.split(/[\s,\.]+/).filter(Boolean);
+  if (tokens.length > 20) return null; // Too many
 
   const results = [];
   for (const t of tokens) {
@@ -122,7 +122,16 @@ toggleInstructions.addEventListener('click', (e) => {
 });
 
 // Init
-if (dateInput.value) {
-  lastTrialDateStr = dateInput.value;
+if (!dateInput.value) {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  dateInput.value = `${y}-${m}-${d}`;
+}
+
+lastTrialDateStr = dateInput.value;
+
+if (customInput.value.trim()) {
   fetchDeadlines();
 }

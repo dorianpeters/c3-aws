@@ -37,6 +37,14 @@ async function handler(event) {
     };
   }
 
+  if (offsets.length > 20) {
+    return {
+      statusCode: 400,
+      statusDescription: 'Bad Request',
+      body: JSON.stringify({ error: "Too many 'x-offsets' values provided. Maximum allowed is 20." })
+    };
+  }
+
   const useCourtDays = calculationMethod === 'court';
 
   try {
