@@ -117,7 +117,6 @@ toggle.addEventListener('change', (e) => {
 });
 
 updateButton.addEventListener('click', fetchDeadlines);
-customInput.addEventListener('change', fetchDeadlines); // Also update on change/blur
 
 toggleInstructions.addEventListener('click', (e) => {
   e.preventDefault();
