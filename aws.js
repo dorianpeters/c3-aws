@@ -1,8 +1,23 @@
-import cf from 'cloudfront';
+const holidays = {
+  20250101:1, 20250120:1, 20250212:1, 20250217:1, 20250331:1, 20250526:1, 20250619:1, 20250704:1, 20250901:1, 20250926:1,
+  20251111:1, 20251127:1, 20251128:1, 20251225:1, 20260101:1, 20260119:1, 20260212:1, 20260216:1, 20260331:1, 20260525:1,
+  20260619:1, 20260703:1, 20260907:1, 20260925:1, 20261111:1, 20261126:1, 20261127:1, 20261225:1, 20270101:1, 20270118:1,
+  20270212:1, 20270215:1, 20270331:1, 20270531:1, 20270618:1, 20270705:1, 20270906:1, 20270924:1, 20271111:1, 20271125:1,
+  20271126:1, 20271224:1, 20271231:1, 20280117:1, 20280211:1, 20280221:1, 20280331:1, 20280529:1, 20280619:1, 20280704:1,
+  20280904:1, 20280922:1, 20281110:1, 20281123:1, 20281124:1, 20281225:1, 20290101:1, 20290115:1, 20290212:1, 20290219:1,
+  20290330:1, 20290528:1, 20290619:1, 20290704:1, 20290903:1, 20290928:1, 20291112:1, 20291122:1, 20291123:1, 20291225:1,
+  20300101:1, 20300121:1, 20300212:1, 20300218:1, 20300401:1, 20300527:1, 20300619:1, 20300704:1, 20300902:1, 20300927:1,
+  20301111:1, 20301128:1, 20301129:1, 20301225:1, 20310101:1, 20310120:1, 20310212:1, 20310217:1, 20310331:1, 20310526:1,
+  20310619:1, 20310704:1, 20310901:1, 20310926:1, 20311111:1, 20311127:1, 20311128:1, 20311225:1, 20320101:1, 20320119:1,
+  20320212:1, 20320216:1, 20320331:1, 20320531:1, 20320618:1, 20320705:1, 20320906:1, 20320924:1, 20321111:1, 20321125:1,
+  20321126:1, 20321224:1, 20321231:1, 20330117:1, 20330211:1, 20330221:1, 20330331:1, 20330530:1, 20330620:1, 20330704:1,
+  20330905:1, 20330923:1, 20331111:1, 20331124:1, 20331125:1, 20331226:1, 20340102:1, 20340116:1, 20340213:1, 20340220:1,
+  20340331:1, 20340529:1, 20340619:1, 20340704:1, 20340904:1, 20340922:1, 20341110:1, 20341123:1, 20341124:1, 20341225:1,
+  20350101:1, 20350115:1, 20350212:1, 20350219:1, 20350330:1, 20350528:1, 20350619:1, 20350704:1, 20350903:1, 20350928:1,
+  20351112:1, 20351122:1, 20351123:1, 20351225:1
+};
 
-const kvsHandle = cf.kvs();
-
-async function handler(event) {
+function handler(event) {
   const request = event.request;
   const headers = request.headers;
 
@@ -53,9 +68,7 @@ async function handler(event) {
       throw new Error("Invalid start date format");
     }
 
-    const localHolidayCache = {};
-
-    const deadlines = await calculateDeadlines(startDate, offsets, useCourtDays, kvsHandle, localHolidayCache);
+    const deadlines = calculateDeadlines(startDate, offsets, useCourtDays);
 
     return {
       statusCode: 200,
@@ -95,7 +108,7 @@ const addCalendarDaysFn = (date, n) => {
   return d;
 };
 
-async function isCourtDay(date, kvsHandle, cache) {
+function isCourtDay(date) {
   const day = date.getDay();
   if (day === 0 || day === 6) {
     return false;
@@ -106,39 +119,31 @@ async function isCourtDay(date, kvsHandle, cache) {
   const d = date.getDate();
   const keyStr = ((y * 10000) + (m * 100) + d).toString();
 
-  if (cache[keyStr] !== undefined) {
-    return !cache[keyStr];
-  }
-
-  try {
-    await kvsHandle.get(keyStr);
-    cache[keyStr] = true;
+  if (holidays[keyStr]) {
     return false;
-  } catch (err) {
-    cache[keyStr] = false;
-    return true;
   }
+  return true;
 }
 
-async function adjustBackwardToCourtDay(date, kvsHandle, cache) {
+function adjustBackwardToCourtDay(date) {
   const d = new Date(date);
-  while (!(await isCourtDay(d, kvsHandle, cache))) {
+  while (!isCourtDay(d)) {
     d.setDate(d.getDate() - 1);
   }
   return d;
 }
 
-async function adjustForwardToCourtDay(date, kvsHandle, cache) {
+function adjustForwardToCourtDay(date) {
   const d = new Date(date);
-  while (!(await isCourtDay(d, kvsHandle, cache))) {
+  while (!isCourtDay(d)) {
     d.setDate(d.getDate() + 1);
   }
   return d;
 }
 
-async function addCourtDays(date, n, kvsHandle, cache) {
+function addCourtDays(date, n) {
   if (n === 0) {
-    return (await isCourtDay(date, kvsHandle, cache)) ? new Date(date) : await adjustForwardToCourtDay(date, kvsHandle, cache);
+    return isCourtDay(date) ? new Date(date) : adjustForwardToCourtDay(date);
   }
   const step = n > 0 ? 1 : -1;
   let count = 0;
@@ -146,37 +151,33 @@ async function addCourtDays(date, n, kvsHandle, cache) {
 
   while (count < Math.abs(n)) {
     d.setDate(d.getDate() + step);
-    if (await isCourtDay(d, kvsHandle, cache)) count++;
+    if (isCourtDay(d)) count++;
   }
   return d;
 }
 
-async function addDays(date, n, opts) {
+function addDays(date, n, opts) {
   opts = opts || {};
   const useCourtDays = opts.useCourtDays || false;
-  const kvsHandle = opts.kvsHandle;
-  const cache = opts.cache;
 
-  if (useCourtDays) return await addCourtDays(date, n, kvsHandle, cache);
+  if (useCourtDays) return addCourtDays(date, n);
 
   const candidate = addCalendarDaysFn(date, n);
-  if (!(await isCourtDay(candidate, kvsHandle, cache))) {
+  if (!isCourtDay(candidate)) {
     return n >= 0
-      ? await adjustForwardToCourtDay(candidate, kvsHandle, cache)
-      : await adjustBackwardToCourtDay(candidate, kvsHandle, cache);
+      ? adjustForwardToCourtDay(candidate)
+      : adjustBackwardToCourtDay(candidate);
   }
   return candidate;
 }
 
-async function calculateDeadlines(startDate, differentials, useCourtDays, kvsHandle, cache) {
+function calculateDeadlines(startDate, differentials, useCourtDays) {
   const results = {};
 
   for (let i = 0; i < differentials.length; i++) {
     const diff = differentials[i];
-    const date = await addDays(startDate, diff, {
-      useCourtDays: useCourtDays,
-      kvsHandle: kvsHandle,
-      cache: cache
+    const date = addDays(startDate, diff, {
+      useCourtDays: useCourtDays
     });
     results[diff] = toLocalIso(date);
   }
