@@ -54,23 +54,23 @@ p {
 }
 
 /* Span styling for deadlines */
-.deadlines {
+.result-date {
   font-weight: bold;
   transition: color 0.3s ease;
 }
 
 /* Green for court days */
-.court-mode .deadlines {
+.court-mode .result-date {
   color: #4CAF50;
 }
 
 /* Blue for calendar days */
-.calendar-mode .deadlines {
+.calendar-mode .result-date {
   color: #007BFF;
 }
 
 /* Add some spacing */
-deadlines,
+.result-date,
 h3 {
   margin-bottom: 10px;
 }
@@ -92,7 +92,7 @@ input[type="date"]:focus {
 }
 
 /* Button styling */
-button#updateCustomDeadlines {
+button#updateCalculation {
   display: block;
   margin: 20px auto 30px auto;
   padding: 12px 32px;
@@ -107,21 +107,21 @@ button#updateCustomDeadlines {
   transition: background 0.2s, box-shadow 0.2s;
 }
 
-button#updateCustomDeadlines:hover,
-button#updateCustomDeadlines:focus {
+button#updateCalculation:hover,
+button#updateCalculation:focus {
   background: linear-gradient(90deg, #0056b3 0%, #007BFF 100%);
   box-shadow: 0 4px 16px rgba(0, 123, 255, 0.18);
   outline: none;
 }
 
 /* Modifier class applied to button via ui.js */
-button#updateCustomDeadlines.court-mode-btn {
+button#updateCalculation.court-mode-btn {
   background: linear-gradient(90deg, #4CAF50 0%, #388E3C 100%);
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.10);
 }
 
-button#updateCustomDeadlines.court-mode-btn:hover,
-button#updateCustomDeadlines.court-mode-btn:focus {
+button#updateCalculation.court-mode-btn:hover,
+button#updateCalculation.court-mode-btn:focus {
   background: linear-gradient(90deg, #388E3C 0%, #4CAF50 100%);
   box-shadow: 0 4px 16px rgba(76, 175, 80, 0.18);
 }

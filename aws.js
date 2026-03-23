@@ -68,7 +68,7 @@ function handler(event) {
       throw new Error("Invalid start date format");
     }
 
-    const deadlines = calculateDeadlines(startDate, offsets, useCourtDays);
+    const dates = calculateDates(startDate, offsets, useCourtDays);
 
     return {
       statusCode: 200,
@@ -79,12 +79,12 @@ function handler(event) {
       body: JSON.stringify({
         startDate: toLocalIso(startDate),
         calculationMethod: calculationMethod,
-        deadlines: deadlines
+        results: dates
       })
     };
 
   } catch (e) {
-    console.log(`Error calculating deadlines: ${e}`);
+    console.log(`Error calculating dates: ${e}`);
     return {
       statusCode: 500,
       statusDescription: 'Internal Server Error',
@@ -171,7 +171,7 @@ function addDays(date, n, opts) {
   return candidate;
 }
 
-function calculateDeadlines(startDate, differentials, useCourtDays) {
+function calculateDates(startDate, differentials, useCourtDays) {
   const results = {};
 
   for (let i = 0; i < differentials.length; i++) {

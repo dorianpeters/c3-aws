@@ -1,8 +1,8 @@
 const dateInput = document.getElementById('dateInput');
 const toggle = document.getElementById('calculationModeToggle');
-const deadlinesContainer = document.getElementById('deadlinesContainer');
-const customInput = document.getElementById('customDeadlines');
-const updateButton = document.getElementById('updateCustomDeadlines');
+const resultsContainer = document.getElementById('resultsContainer');
+const customInput = document.getElementById('customOffsets');
+const updateButton = document.getElementById('updateCalculation');
 const toggleInstructions = document.getElementById('toggleInstructions');
 const instructionsContent = document.getElementById('instructionsContent');
 
@@ -35,12 +35,12 @@ const parseDifferentials = (input) => {
   return results;
 };
 
-const renderResults = (deadlinesMap, sortedDiffs) => {
-  deadlinesContainer.className = useCourtDays ? 'court-mode' : 'calendar-mode';
+const renderResults = (resultsMap, sortedDiffs) => {
+  resultsContainer.className = useCourtDays ? 'court-mode' : 'calendar-mode';
 
   let html = '';
   for (const diff of sortedDiffs) {
-    const dateIso = deadlinesMap[diff];
+    const dateIso = resultsMap[diff];
     if (!dateIso) continue;
 
     const parts = dateIso.split('-');
@@ -53,14 +53,14 @@ const renderResults = (deadlinesMap, sortedDiffs) => {
     const formattedDate = dateFormatter.format(dateObj);
     const description = `${offsetText} ${typeText} days ${dirText} the selected date:`;
 
-    html += `<h3>${description} <span class="deadlines">${formattedDate}</span></h3>`;
+    html += `<h3>${description} <span class="result-date">${formattedDate}</span></h3>`;
   }
 
-  deadlinesContainer.innerHTML = html;
+  resultsContainer.innerHTML = html;
 };
 
 let fetchTimeout = null;
-const fetchDeadlines = () => {
+const fetchResults = () => {
   if (fetchTimeout !== null) clearTimeout(fetchTimeout);
 
   fetchTimeout = setTimeout(() => {
@@ -68,13 +68,13 @@ const fetchDeadlines = () => {
     const diffs = parseDifferentials(offsetsValue);
 
     if (diffs === null && offsetsValue.trim()) {
-      deadlinesContainer.className = '';
-      deadlinesContainer.innerHTML = '<p class="error">Invalid input. Enter integers between -1000 and 1000, separated by spaces or commas.</p>';
+      resultsContainer.className = '';
+      resultsContainer.innerHTML = '<p class="error">Invalid input. Enter integers between -1000 and 1000, separated by spaces or commas.</p>';
       return;
     }
 
     if (!lastTrialDateStr || !diffs || diffs.length === 0) {
-      deadlinesContainer.innerHTML = '';
+      resultsContainer.innerHTML = '';
       return;
     }
 
@@ -91,11 +91,11 @@ const fetchDeadlines = () => {
         return res.json();
       })
       .then(data => {
-        renderResults(data.deadlines, diffs);
+        renderResults(data.results, diffs);
       })
       .catch(err => {
         console.error(err);
-        deadlinesContainer.innerHTML = '<p class="error">Error calculating deadlines. Please try again.</p>';
+        resultsContainer.innerHTML = '<p class="error">Error calculating dates. Please try again.</p>';
       });
   }, 100);
 };
@@ -103,7 +103,7 @@ const fetchDeadlines = () => {
 // Event Listeners
 dateInput.addEventListener('change', (e) => {
   lastTrialDateStr = e.target.value; // YYYY-MM-DD from input type="date"
-  fetchDeadlines();
+  fetchResults();
 });
 
 toggle.addEventListener('change', (e) => {
@@ -115,10 +115,10 @@ toggle.addEventListener('change', (e) => {
     updateButton.classList.remove('court-mode-btn');
     toggleInstructions.classList.remove('court-mode-instructions');
   }
-  fetchDeadlines();
+  fetchResults();
 });
 
-updateButton.addEventListener('click', fetchDeadlines);
+updateButton.addEventListener('click', fetchResults);
 
 toggleInstructions.addEventListener('click', (e) => {
   e.preventDefault();
@@ -147,5 +147,5 @@ if (useCourtDays) {
 }
 
 if (customInput.value.trim()) {
-  fetchDeadlines();
+  fetchResults();
 }

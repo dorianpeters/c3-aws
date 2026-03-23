@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>CA Court Deadlines</title>
+  <title>CA Court Calculator</title>
 
 </head>
 
 <body>
-  <h1>CA Court Deadlines</h1>
+  <h1>CA Court Calculator</h1>
 
   <h3>Select a starting date:</h3>
   <input type="date" id="dateInput" placeholder="Select a date" />
@@ -25,11 +25,11 @@
     <span class="toggle-label-right">Court Days</span>
   </div>
 
-  <div id="deadlinesContainer"></div>
+  <div id="resultsContainer"></div>
 
   <h3>Enter days from the selected day</h3>
-  <input type="text" id="customDeadlines" />
-  <button id="updateCustomDeadlines">Update Deadlines</button>
+  <input type="text" id="customOffsets" />
+  <button id="updateCalculation">Update Calculation</button>
 
   <div class="instructions-container">
     <a href="#" id="toggleInstructions">Show Instructions</a>
@@ -46,8 +46,8 @@
           final date) or 'Court Days' (skips weekends and holidays entirely).
         </li>
         <li>
-          <strong>Calculate Deadlines:</strong> Enter the number of days in the text
-          box that you want to calculate and click 'Update Deadlines'. You may enter
+          <strong>Calculate Days:</strong> Enter the number of days in the text
+          box that you want to calculate and click 'Update Calculation'. You may enter
           mulitple date differentials at the same time seperated by spaces or commas
           (ex: -30, -15, 0, 15, 30).
         </li>
