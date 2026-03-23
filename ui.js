@@ -110,8 +110,10 @@ toggle.addEventListener('change', (e) => {
   useCourtDays = e.target.checked;
   if (useCourtDays) {
     updateButton.classList.add('court-mode-btn');
+    toggleInstructions.classList.add('court-mode-instructions');
   } else {
     updateButton.classList.remove('court-mode-btn');
+    toggleInstructions.classList.remove('court-mode-instructions');
   }
   fetchDeadlines();
 });
@@ -138,8 +140,10 @@ lastTrialDateStr = dateInput.value;
 
 if (useCourtDays) {
   updateButton.classList.add('court-mode-btn');
+  toggleInstructions.classList.add('court-mode-instructions');
 } else {
   updateButton.classList.remove('court-mode-btn');
+  toggleInstructions.classList.remove('court-mode-instructions');
 }
 
 if (customInput.value.trim()) {

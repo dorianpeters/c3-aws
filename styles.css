@@ -250,6 +250,11 @@ input:not(:checked)~.toggle-label-left {
   color: #007BFF;
   font-weight: bold;
   text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+#toggleInstructions.court-mode-instructions {
+  color: #4CAF50;
 }
 
 #toggleInstructions:hover {
